@@ -1,0 +1,1156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Three Body Stellar Dynamics</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --panel: rgba(8, 12, 20, 0.74);
+      --panel-strong: rgba(9, 14, 24, 0.92);
+      --line: rgba(255, 255, 255, 0.14);
+      --text: #eef6ff;
+      --muted: #9fb0c6;
+      --accent: #79e0ff;
+      --warm: #ffba70;
+      --danger: #ff5d7a;
+      --green: #8cffbf;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #02040a;
+      color: var(--text);
+    }
+
+    body {
+      min-height: 100vh;
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: grab;
+      background: #02040a;
+    }
+
+    canvas:active { cursor: grabbing; }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 18px;
+      left: 22px;
+      right: 22px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .title {
+      max-width: min(560px, 62vw);
+      text-shadow: 0 2px 24px rgba(0, 0, 0, 0.7);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 4.4vw, 4.35rem);
+      line-height: 0.92;
+      letter-spacing: 0;
+      font-weight: 780;
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: clamp(0.86rem, 1.4vw, 1.04rem);
+      line-height: 1.45;
+      max-width: 48rem;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(82px, 1fr));
+      gap: 8px;
+      width: min(360px, 34vw);
+      pointer-events: none;
+    }
+
+    .stat {
+      min-height: 62px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      background: rgba(8, 13, 23, 0.52);
+      backdrop-filter: blur(14px);
+      border-radius: 8px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 5px;
+      font-size: clamp(0.92rem, 1.4vw, 1.15rem);
+      white-space: nowrap;
+    }
+
+    .panel {
+      position: absolute;
+      right: 22px;
+      bottom: 20px;
+      width: min(390px, calc(100vw - 44px));
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 18px 80px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(18px);
+      pointer-events: auto;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 105px 1fr 58px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .row label,
+    .group-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    output {
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      font-size: 0.88rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .buttons,
+    .presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 680;
+      cursor: pointer;
+      transition: transform 150ms ease, background 150ms ease, border-color 150ms ease;
+    }
+
+    button:hover,
+    button:focus-visible {
+      background: rgba(121, 224, 255, 0.16);
+      border-color: rgba(121, 224, 255, 0.48);
+      outline: none;
+    }
+
+    button:active { transform: translateY(1px); }
+
+    button.active {
+      background: rgba(121, 224, 255, 0.24);
+      border-color: rgba(121, 224, 255, 0.7);
+      color: #ffffff;
+    }
+
+    .legend {
+      position: absolute;
+      left: 22px;
+      bottom: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: min(560px, calc(100vw - 460px));
+      pointer-events: none;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(8, 13, 23, 0.54);
+      backdrop-filter: blur(10px);
+      color: var(--muted);
+      font-size: 0.76rem;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .notice {
+      position: absolute;
+      left: 50%;
+      bottom: 30px;
+      transform: translateX(-50%) translateY(16px);
+      padding: 9px 12px;
+      border: 1px solid rgba(255, 93, 122, 0.35);
+      border-radius: 8px;
+      background: rgba(35, 6, 13, 0.78);
+      color: #ffd9df;
+      opacity: 0;
+      transition: opacity 220ms ease, transform 220ms ease;
+      pointer-events: none;
+      font-size: 0.86rem;
+      max-width: calc(100vw - 44px);
+      text-align: center;
+    }
+
+    .notice.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 840px) {
+      .topbar {
+        left: 14px;
+        right: 14px;
+        display: block;
+      }
+
+      .title { max-width: none; }
+
+      .subtitle { max-width: 84vw; }
+
+      .stats {
+        margin-top: 12px;
+        width: min(420px, calc(100vw - 28px));
+      }
+
+      .panel {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        width: auto;
+      }
+
+      .legend {
+        display: none;
+      }
+
+      .row {
+        grid-template-columns: 88px 1fr 48px;
+      }
+
+      .buttons,
+      .presets {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 520px) {
+      h1 { font-size: 2rem; }
+      .subtitle { display: none; }
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .stat { min-height: 52px; padding: 8px; }
+      .stat span { font-size: 0.62rem; }
+      .stat strong { font-size: 0.82rem; }
+      .panel { padding: 11px; }
+      .row { grid-template-columns: 78px 1fr 42px; gap: 7px; }
+      .row label, .group-label { font-size: 0.68rem; }
+      button { min-height: 34px; font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="space" aria-label="Interactive three body star system simulation"></canvas>
+  <main class="hud">
+    <section class="topbar">
+      <div class="title">
+        <h1>Three Body Stellar Dynamics</h1>
+        <p class="subtitle">Real Newtonian gravity with stable presets, relativistic-looking black holes, cinematic following camera, glow trails, collision energy bursts, and a discovered-object catalog view.</p>
+      </div>
+      <div class="stats" aria-live="polite">
+        <div class="stat"><span>System age</span><strong id="age">0.0 y</strong></div>
+        <div class="stat"><span>Energy drift</span><strong id="energy">0.00%</strong></div>
+        <div class="stat"><span>Scale</span><strong id="scale">1.00 AU</strong></div>
+      </div>
+    </section>
+
+    <section class="legend" id="legend"></section>
+
+    <section class="panel" aria-label="Simulation controls">
+      <div class="controls">
+        <div>
+          <div class="group-label">Real systems</div>
+          <div class="presets" id="presets"></div>
+        </div>
+        <div class="row">
+          <label for="timeScale">Time</label>
+          <input id="timeScale" type="range" min="0" max="100" value="32">
+          <output id="timeOut">1.0x</output>
+        </div>
+        <div class="row">
+          <label for="massScale">Mass</label>
+          <input id="massScale" type="range" min="25" max="225" value="100">
+          <output id="massOut">1.00x</output>
+        </div>
+        <div class="row">
+          <label for="trailScale">Trails</label>
+          <input id="trailScale" type="range" min="20" max="100" value="74">
+          <output id="trailOut">74%</output>
+        </div>
+        <div class="row">
+          <label for="cameraScale">Camera</label>
+          <input id="cameraScale" type="range" min="0" max="100" value="68">
+          <output id="cameraOut">Cinema</output>
+        </div>
+        <div class="buttons">
+          <button id="pauseBtn" type="button">Pause</button>
+          <button id="restartBtn" type="button">Restart</button>
+          <button id="explodeBtn" type="button">Burst</button>
+        </div>
+      </div>
+    </section>
+    <div class="notice" id="notice"></div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("space");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+    const G = 39.47841760435743; // AU^3 / solar mass / year^2
+    const SOFTENING = 0.015;
+    const MAX_DT = 0.00025;
+    const C_AU_PER_YEAR = 63241.1;
+
+    const ui = {
+      age: document.getElementById("age"),
+      energy: document.getElementById("energy"),
+      scale: document.getElementById("scale"),
+      legend: document.getElementById("legend"),
+      notice: document.getElementById("notice"),
+      presets: document.getElementById("presets"),
+      timeScale: document.getElementById("timeScale"),
+      timeOut: document.getElementById("timeOut"),
+      massScale: document.getElementById("massScale"),
+      massOut: document.getElementById("massOut"),
+      trailScale: document.getElementById("trailScale"),
+      trailOut: document.getElementById("trailOut"),
+      cameraScale: document.getElementById("cameraScale"),
+      cameraOut: document.getElementById("cameraOut"),
+      pauseBtn: document.getElementById("pauseBtn"),
+      restartBtn: document.getElementById("restartBtn"),
+      explodeBtn: document.getElementById("explodeBtn")
+    };
+
+    const systems = {
+      alpha: {
+        label: "Alpha Cen",
+        subtitle: "Alpha Centauri A/B with Proxima on a wide orbit",
+        bodies: [
+          star("Alpha Cen A", 1.08, [-11.2, 0], [0, -0.54], 0.052, "#ffd891"),
+          star("Alpha Cen B", 0.91, [13.3, 0], [0, 0.64], 0.044, "#ffad63"),
+          star("Proxima", 0.122, [360, 0], [0, 0.105], 0.024, "#ff756d")
+        ]
+      },
+      sirius: {
+        label: "Sirius",
+        subtitle: "Sirius A/B plus a hypothetical captured dark companion",
+        bodies: [
+          star("Sirius A", 2.06, [-7.2, 0], [0, -1.42], 0.063, "#b9d8ff"),
+          star("Sirius B", 1.02, [14.6, 0], [0, 2.87], 0.023, "#f5fbff"),
+          blackHole("Hidden BH", 3.4, [0, 46], [-1.78, -0.14], 0.055, "#1b1d2e")
+        ]
+      },
+      stable: {
+        label: "Figure 8",
+        subtitle: "Choreographic equal-mass stable three-body orbit",
+        bodies: [
+          star("Body A", 1, [-0.97000436, 0.24308753], [0.466203685 * Math.sqrt(G), 0.43236573 * Math.sqrt(G)], 0.038, "#7ee8ff"),
+          star("Body B", 1, [0.97000436, -0.24308753], [0.466203685 * Math.sqrt(G), 0.43236573 * Math.sqrt(G)], 0.038, "#ffcf7b"),
+          star("Body C", 1, [0, 0], [-0.93240737 * Math.sqrt(G), -0.86473146 * Math.sqrt(G)], 0.038, "#ff6f9d")
+        ],
+        compact: true
+      },
+      black: {
+        label: "Trinary BH",
+        subtitle: "Two stars interacting with a stellar-mass black hole",
+        bodies: [
+          blackHole("Cygnus-like BH", 10.0, [0, 0], [0.0, 0.0], 0.07, "#11131f"),
+          star("Blue giant", 2.0, [4.2, 0], [0, Math.sqrt(G * 10.0 / 4.2)], 0.068, "#80bfff"),
+          star("Red companion", 1.1, [-10.5, 0], [0, -Math.sqrt(G * 10.0 / 10.5)], 0.052, "#ff7b54")
+        ],
+        compact: true
+      },
+      catalog: {
+        label: "Known Catalog",
+        subtitle: "A discovered-object atlas layer around a stable Milky Way core",
+        catalog: true,
+        bodies: [
+          blackHole("Sgr A*", 4300000, [0, 0], [0, 0], 0.11, "#10121a"),
+          star("S2", 14.0, [970, 0], [0, Math.sqrt(G * 4300000 / 970)], 0.03, "#cfe8ff"),
+          star("S38", 8.0, [-1220, 0], [0, -Math.sqrt(G * 4300000 / 1220)], 0.026, "#ffdca1")
+        ],
+        compact: true
+      }
+    };
+
+    const nebulaColors = [
+      [54, 112, 178],
+      [165, 79, 154],
+      [53, 181, 166],
+      [226, 139, 82],
+      [98, 87, 171]
+    ];
+
+    const knownObjectSeeds = [
+      catalogSeed("Sgr A*", "blackHole", 4300000, 0, 0, "#12141d"),
+      catalogSeed("M87*", "blackHole", 6500000000, -44, 26, "#11131f"),
+      catalogSeed("Cygnus X-1", "blackHole", 21.2, 34, -21, "#151722"),
+      catalogSeed("Gaia BH1", "blackHole", 9.6, -30, -18, "#171a25"),
+      catalogSeed("Sun", "star", 1, 3, -2, "#ffd891"),
+      catalogSeed("Sirius A", "star", 2.06, 9, 7, "#b9d8ff"),
+      catalogSeed("Alpha Cen A", "star", 1.08, -8, 6, "#ffd891"),
+      catalogSeed("Betelgeuse", "star", 16.5, 20, -12, "#ff7d51"),
+      catalogSeed("Vega", "star", 2.14, -17, 14, "#d7e7ff"),
+      catalogSeed("Proxima b", "planet", 0.000004, -12, -6, "#8bd3ff"),
+      catalogSeed("TRAPPIST-1 e", "planet", 0.000002, 13, -9, "#83ffc8"),
+      catalogSeed("51 Pegasi b", "planet", 0.00045, -20, -15, "#ffbd72"),
+      catalogSeed("Kepler-186f", "planet", 0.000004, 24, 13, "#90ffaa"),
+      catalogSeed("Orion Nebula", "nebula", 2000, -24, 22, "#c77dff"),
+      catalogSeed("Crab Nebula", "nebula", 4.6, 29, 22, "#ff8b66"),
+      catalogSeed("Pleiades", "cluster", 800, -32, 5, "#9fe7ff"),
+      catalogSeed("Omega Centauri", "cluster", 4000000, 36, 7, "#ffe6a3"),
+      catalogSeed("Milky Way", "galaxy", 1500000000000, 0, 0, "#d8e7ff"),
+      catalogSeed("Andromeda", "galaxy", 1200000000000, 48, -8, "#b8c7ff"),
+      catalogSeed("Triangulum", "galaxy", 50000000000, -52, -9, "#a8d8ff"),
+      catalogSeed("3C 273", "quasar", 886000000, 56, 24, "#b88cff"),
+      catalogSeed("TON 618", "quasar", 66000000000, -57, 28, "#ff91d2")
+    ];
+
+    let width = 1;
+    let height = 1;
+    let paused = false;
+    let presetKey = "stable";
+    let bodies = [];
+    let catalogObjects = [];
+    let particles = [];
+    let stars = [];
+    let age = 0;
+    let initialEnergy = 0;
+    let last = performance.now();
+    let camera = { x: 0, y: 0, zoom: 130, roll: 0, shake: 0 };
+    let pointer = { down: false, x: 0, y: 0, ox: 0, oy: 0 };
+
+    function star(name, mass, pos, vel, radius, color) {
+      return { name, mass, pos, vel, radius, color, kind: "star" };
+    }
+
+    function blackHole(name, mass, pos, vel, radius, color) {
+      return { name, mass, pos, vel, radius, color, kind: "blackHole" };
+    }
+
+    function catalogSeed(name, kind, mass, x, y, color) {
+      return { name, kind, mass, x, y, color, named: true };
+    }
+
+    function makeCatalogObject(name, kind, mass, x, y, color, radius, alpha = 0.78) {
+      return { name, kind, mass, x, y, color, radius, alpha };
+    }
+
+    function generateKnownCatalog() {
+      const rand = mulberry(9112026);
+      const objects = knownObjectSeeds.map((item) => {
+        const radius = item.kind === "galaxy" ? 4.8 : item.kind === "nebula" ? 5.7 : item.kind === "blackHole" ? 3.2 : 2.2;
+        return makeCatalogObject(item.name, item.kind, item.mass, item.x * 22, item.y * 22, item.color, radius, 0.92);
+      });
+
+      const bands = [
+        { prefix: "Gaia star", kind: "star", count: 620, color: "#dce9ff", spread: 1450, alpha: 0.42 },
+        { prefix: "Confirmed exoplanet", kind: "planet", count: 260, color: "#8cffbf", spread: 980, alpha: 0.56 },
+        { prefix: "Minor planet", kind: "planet", count: 360, color: "#ffcf7b", spread: 1260, alpha: 0.38 },
+        { prefix: "Deep-sky nebula", kind: "nebula", count: 64, color: "#c77dff", spread: 1350, alpha: 0.48 },
+        { prefix: "Galaxy catalog", kind: "galaxy", count: 120, color: "#a8d8ff", spread: 1800, alpha: 0.5 },
+        { prefix: "Quasar candidate", kind: "quasar", count: 72, color: "#ff91d2", spread: 1900, alpha: 0.58 },
+        { prefix: "Black-hole candidate", kind: "blackHole", count: 36, color: "#4d5365", spread: 1120, alpha: 0.7 }
+      ];
+
+      for (const band of bands) {
+        for (let i = 0; i < band.count; i++) {
+          const arm = (i % 4) * Math.PI * 0.5;
+          const radius = Math.pow(rand(), 0.62) * band.spread + 35;
+          const angle = arm + radius * 0.006 + (rand() - 0.5) * 1.15;
+          const z = (rand() - 0.5) * band.spread * 0.16;
+          const x = Math.cos(angle) * radius + z;
+          const y = Math.sin(angle) * radius * 0.55 + (rand() - 0.5) * 180;
+          const visualRadius = band.kind === "galaxy" ? 2.4 + rand() * 2.8 : band.kind === "nebula" ? 2.8 + rand() * 3.6 : 0.85 + rand() * 1.65;
+          const mass = band.kind === "galaxy" ? 1e9 + rand() * 1e12 : band.kind === "blackHole" ? 3 + rand() * 1e8 : rand() * 12;
+          objects.push(makeCatalogObject(`${band.prefix} ${i + 1}`, band.kind, mass, x, y, band.color, visualRadius, band.alpha));
+        }
+      }
+
+      return objects;
+    }
+
+    function cloneBody(source) {
+      return {
+        ...source,
+        baseMass: source.mass,
+        m: source.mass,
+        x: source.pos[0],
+        y: source.pos[1],
+        vx: source.vel[0],
+        vy: source.vel[1],
+        ax: 0,
+        ay: 0,
+        radius: source.radius,
+        trail: []
+      };
+    }
+
+    function resize() {
+      width = Math.floor(window.innerWidth);
+      height = Math.floor(window.innerHeight);
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildStars();
+    }
+
+    function mulberry(seed) {
+      return function rand() {
+        seed |= 0;
+        seed = seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    function buildStars() {
+      const rand = mulberry(1349);
+      stars = Array.from({ length: Math.round((width * height) / 6200) }, () => {
+        const depth = rand();
+        return {
+          x: rand() * width,
+          y: rand() * height,
+          r: 0.35 + depth * 1.25,
+          a: 0.22 + depth * 0.72,
+          hue: 190 + rand() * 70,
+          drift: 0.3 + depth * 1.8
+        };
+      });
+    }
+
+    function resetSystem(key = presetKey) {
+      presetKey = key;
+      bodies = systems[key].bodies.map(cloneBody);
+      catalogObjects = systems[key].catalog ? generateKnownCatalog() : [];
+      particles = [];
+      age = 0;
+      centerMomentum();
+      applyMassScale();
+      computeAccelerations();
+      initialEnergy = totalEnergy();
+      fitCamera(true);
+      renderLegend();
+      document.querySelectorAll("[data-preset]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.preset === key);
+      });
+      if (systems[key].catalog) {
+        showNotice("Catalog view uses a broad discovered-object atlas; no single public list contains every object humans have discovered.");
+      }
+    }
+
+    function centerMomentum() {
+      let mass = 0;
+      let px = 0;
+      let py = 0;
+      let cx = 0;
+      let cy = 0;
+      for (const b of bodies) {
+        mass += b.m || b.mass;
+        px += (b.m || b.mass) * b.vx;
+        py += (b.m || b.mass) * b.vy;
+        cx += (b.m || b.mass) * b.x;
+        cy += (b.m || b.mass) * b.y;
+      }
+      px /= mass;
+      py /= mass;
+      cx /= mass;
+      cy /= mass;
+      for (const b of bodies) {
+        b.vx -= px;
+        b.vy -= py;
+        b.x -= cx;
+        b.y -= cy;
+      }
+    }
+
+    function applyMassScale() {
+      const scale = Number(ui.massScale.value) / 100;
+      for (const b of bodies) {
+        b.m = b.baseMass * scale;
+      }
+      ui.massOut.textContent = `${scale.toFixed(2)}x`;
+    }
+
+    function timeMultiplier() {
+      const value = Number(ui.timeScale.value) / 100;
+      return Math.pow(value, 2.55) * 18;
+    }
+
+    function computeAccelerations() {
+      for (const b of bodies) {
+        b.ax = 0;
+        b.ay = 0;
+      }
+
+      for (let i = 0; i < bodies.length; i++) {
+        for (let j = i + 1; j < bodies.length; j++) {
+          const a = bodies[i];
+          const b = bodies[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const r2 = dx * dx + dy * dy + SOFTENING * SOFTENING;
+          const invR = 1 / Math.sqrt(r2);
+          const invR3 = invR * invR * invR;
+          const force = G * invR3;
+
+          a.ax += force * b.m * dx;
+          a.ay += force * b.m * dy;
+          b.ax -= force * a.m * dx;
+          b.ay -= force * a.m * dy;
+
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const mergeDistance = (a.radius + b.radius) * 3.2;
+          if (dist < mergeDistance) {
+            collisionBurst((a.x + b.x) / 2, (a.y + b.y) / 2, Math.min(1, (a.m + b.m) / 10), a.color, b.color);
+            camera.shake = Math.min(1.2, camera.shake + 0.18);
+            nudgeApart(a, b, dx, dy, mergeDistance - dist + 0.02);
+          }
+        }
+      }
+    }
+
+    function nudgeApart(a, b, dx, dy, amount) {
+      const dist = Math.max(0.001, Math.hypot(dx, dy));
+      const nx = dx / dist;
+      const ny = dy / dist;
+      a.x -= nx * amount * 0.5;
+      a.y -= ny * amount * 0.5;
+      b.x += nx * amount * 0.5;
+      b.y += ny * amount * 0.5;
+      a.vx -= nx * 0.08;
+      a.vy -= ny * 0.08;
+      b.vx += nx * 0.08;
+      b.vy += ny * 0.08;
+    }
+
+    function integrate(dt) {
+      let remaining = dt;
+      while (remaining > 0) {
+        const step = Math.min(MAX_DT, remaining);
+        for (const b of bodies) {
+          b.vx += b.ax * step * 0.5;
+          b.vy += b.ay * step * 0.5;
+          b.x += b.vx * step;
+          b.y += b.vy * step;
+        }
+        computeAccelerations();
+        for (const b of bodies) {
+          b.vx += b.ax * step * 0.5;
+          b.vy += b.ay * step * 0.5;
+          b.trail.push({ x: b.x, y: b.y });
+          const maxTrail = Math.round(80 + Number(ui.trailScale.value) * 4.1);
+          if (b.trail.length > maxTrail) b.trail.splice(0, b.trail.length - maxTrail);
+        }
+        age += step;
+        remaining -= step;
+      }
+    }
+
+    function totalEnergy() {
+      let kinetic = 0;
+      let potential = 0;
+      for (let i = 0; i < bodies.length; i++) {
+        const a = bodies[i];
+        kinetic += 0.5 * a.m * (a.vx * a.vx + a.vy * a.vy);
+        for (let j = i + 1; j < bodies.length; j++) {
+          const b = bodies[j];
+          const r = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2 + SOFTENING * SOFTENING);
+          potential -= G * a.m * b.m / r;
+        }
+      }
+      return kinetic + potential;
+    }
+
+    function collisionBurst(x, y, intensity, colorA, colorB) {
+      const count = Math.round(34 + intensity * 28);
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.5 + Math.random() * (2.4 + intensity * 2.4);
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 0.75 + Math.random() * 0.55,
+          max: 1.15,
+          size: 1 + Math.random() * 2.8,
+          color: Math.random() > 0.5 ? colorA : colorB
+        });
+      }
+    }
+
+    function updateParticles(dt) {
+      for (const p of particles) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vx *= 1 - dt * 0.5;
+        p.vy *= 1 - dt * 0.5;
+        p.life -= dt;
+      }
+      particles = particles.filter((p) => p.life > 0);
+    }
+
+    function centerOfMass() {
+      let mass = 0;
+      let x = 0;
+      let y = 0;
+      for (const b of bodies) {
+        mass += b.m;
+        x += b.x * b.m;
+        y += b.y * b.m;
+      }
+      return { x: x / mass, y: y / mass };
+    }
+
+    function systemRadius() {
+      const c = centerOfMass();
+      const bodyRadius = bodies.map((b) => Math.hypot(b.x - c.x, b.y - c.y) + b.radius * 12);
+      const catalogRadius = catalogObjects.map((b) => Math.hypot(b.x - c.x, b.y - c.y) + b.radius);
+      return Math.max(0.7, ...bodyRadius, ...catalogRadius);
+    }
+
+    function fitCamera(immediate = false) {
+      const c = centerOfMass();
+      const r = systemRadius();
+      const desiredZoom = Math.min(width, height) / (r * 2.65);
+      const cinema = Number(ui.cameraScale.value) / 100;
+      const followX = c.x + Math.sin(age * 0.11) * r * 0.05 * cinema;
+      const followY = c.y + Math.cos(age * 0.09) * r * 0.05 * cinema;
+      const alpha = immediate ? 1 : 0.035 + cinema * 0.04;
+      camera.x += (followX - camera.x) * alpha;
+      camera.y += (followY - camera.y) * alpha;
+      camera.zoom += (desiredZoom - camera.zoom) * alpha;
+      camera.roll = Math.sin(age * 0.17) * 0.018 * cinema;
+      camera.shake *= 0.88;
+      ui.scale.textContent = `${(100 / camera.zoom).toFixed(2)} AU`;
+      ui.cameraOut.textContent = cinema < 0.2 ? "Fixed" : cinema < 0.7 ? "Follow" : "Cinema";
+    }
+
+    function worldToScreen(x, y) {
+      const sx = (x - camera.x) * camera.zoom;
+      const sy = (y - camera.y) * camera.zoom;
+      const c = Math.cos(camera.roll);
+      const s = Math.sin(camera.roll);
+      const shakeX = (Math.random() - 0.5) * camera.shake * 10;
+      const shakeY = (Math.random() - 0.5) * camera.shake * 10;
+      return {
+        x: width / 2 + sx * c - sy * s + shakeX,
+        y: height / 2 + sx * s + sy * c + shakeY
+      };
+    }
+
+    function screenToWorld(x, y) {
+      return {
+        x: (x - width / 2) / camera.zoom + camera.x,
+        y: (y - height / 2) / camera.zoom + camera.y
+      };
+    }
+
+    function drawBackground(t) {
+      const gradient = ctx.createRadialGradient(width * 0.5, height * 0.52, 0, width * 0.5, height * 0.52, Math.max(width, height) * 0.78);
+      gradient.addColorStop(0, "#071121");
+      gradient.addColorStop(0.45, "#030813");
+      gradient.addColorStop(1, "#010207");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      for (let i = 0; i < nebulaColors.length; i++) {
+        const [r, g, b] = nebulaColors[i];
+        const x = width * (0.18 + i * 0.18) + Math.sin(t * 0.00004 + i) * width * 0.04;
+        const y = height * (0.18 + ((i * 37) % 70) / 100) + Math.cos(t * 0.00003 + i) * height * 0.04;
+        const radius = Math.max(width, height) * (0.22 + i * 0.035);
+        const neb = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        neb.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.16)`);
+        neb.addColorStop(0.32, `rgba(${r}, ${g}, ${b}, 0.055)`);
+        neb.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+        ctx.fillStyle = neb;
+        ctx.fillRect(0, 0, width, height);
+      }
+      ctx.restore();
+
+      for (const s of stars) {
+        const parallaxX = ((camera.x * s.drift * 4) % width + width) % width;
+        const parallaxY = ((camera.y * s.drift * 4) % height + height) % height;
+        const x = (s.x - parallaxX + width) % width;
+        const y = (s.y - parallaxY + height) % height;
+        ctx.fillStyle = `hsla(${s.hue}, 90%, 88%, ${s.a})`;
+        ctx.beginPath();
+        ctx.arc(x, y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawTrails() {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      for (const b of bodies) {
+        if (b.trail.length < 3) continue;
+        for (let i = 1; i < b.trail.length; i++) {
+          const a = worldToScreen(b.trail[i - 1].x, b.trail[i - 1].y);
+          const c = worldToScreen(b.trail[i].x, b.trail[i].y);
+          const alpha = Math.pow(i / b.trail.length, 1.6) * 0.64;
+          ctx.strokeStyle = hexToRgba(b.color, alpha);
+          ctx.lineWidth = 0.7 + (i / b.trail.length) * 2.4;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(c.x, c.y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawCatalogObjects() {
+      if (!catalogObjects.length) return;
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      for (const object of catalogObjects) {
+        const p = worldToScreen(object.x, object.y);
+        if (p.x < -80 || p.x > width + 80 || p.y < -80 || p.y > height + 80) continue;
+
+        const radius = Math.max(0.6, Math.min(9, object.radius * Math.sqrt(Math.max(0.15, camera.zoom / 38))));
+        if (object.kind === "galaxy" || object.kind === "nebula" || object.kind === "cluster") {
+          const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 5.5);
+          glow.addColorStop(0, hexToRgba(object.color, object.alpha * 0.35));
+          glow.addColorStop(1, hexToRgba(object.color, 0));
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius * 5.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        if (object.kind === "blackHole") {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.95)";
+          ctx.strokeStyle = hexToRgba("#ffba70", object.alpha * 0.75);
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius * 1.45, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = hexToRgba(object.color, object.alpha);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawBodies() {
+      for (const b of bodies) {
+        const p = worldToScreen(b.x, b.y);
+        const radius = Math.max(5, b.radius * camera.zoom * 2.6);
+        if (b.kind === "blackHole") {
+          drawBlackHole(p.x, p.y, radius, b);
+        } else {
+          drawStar(p.x, p.y, radius, b);
+        }
+      }
+    }
+
+    function drawStar(x, y, radius, b) {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 8);
+      glow.addColorStop(0, hexToRgba(b.color, 0.88));
+      glow.addColorStop(0.18, hexToRgba(b.color, 0.28));
+      glow.addColorStop(1, hexToRgba(b.color, 0));
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      const body = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.35, 0, x, y, radius);
+      body.addColorStop(0, "#ffffff");
+      body.addColorStop(0.28, b.color);
+      body.addColorStop(1, "#d65f39");
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBlackHole(x, y, radius, b) {
+      const rs = Math.max(6, (2 * G * b.m / (C_AU_PER_YEAR * C_AU_PER_YEAR)) * camera.zoom * 900000);
+      const eventRadius = Math.max(radius * 0.95, rs);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.strokeStyle = "rgba(255, 194, 106, 0.86)";
+      ctx.lineWidth = Math.max(2, radius * 0.24);
+      ctx.beginPath();
+      ctx.ellipse(x, y, radius * 3.1, radius * 1.15, -0.35 + age * 0.9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(107, 216, 255, 0.42)";
+      ctx.lineWidth = Math.max(1, radius * 0.13);
+      ctx.beginPath();
+      ctx.ellipse(x, y, radius * 2.25, radius * 0.8, 0.55 - age * 0.62, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const lens = ctx.createRadialGradient(x, y, eventRadius, x, y, radius * 7);
+      lens.addColorStop(0, "rgba(0, 0, 0, 0)");
+      lens.addColorStop(0.28, "rgba(122, 198, 255, 0.16)");
+      lens.addColorStop(1, "rgba(122, 198, 255, 0)");
+      ctx.fillStyle = lens;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.fillStyle = "#000000";
+      ctx.shadowColor = "#000000";
+      ctx.shadowBlur = radius * 1.8;
+      ctx.beginPath();
+      ctx.arc(x, y, eventRadius * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      for (const p of particles) {
+        const s = worldToScreen(p.x, p.y);
+        const alpha = Math.max(0, p.life / p.max);
+        ctx.fillStyle = hexToRgba(p.color, alpha);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, p.size * (0.6 + alpha * 1.8), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function hexToRgba(hex, alpha) {
+      const value = hex.replace("#", "");
+      const r = parseInt(value.slice(0, 2), 16);
+      const g = parseInt(value.slice(2, 4), 16);
+      const b = parseInt(value.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function updateUi() {
+      ui.timeOut.textContent = `${timeMultiplier().toFixed(1)}x`;
+      ui.trailOut.textContent = `${ui.trailScale.value}%`;
+      ui.age.textContent = `${age.toFixed(age < 10 ? 2 : 1)} y`;
+      const drift = initialEnergy ? ((totalEnergy() - initialEnergy) / Math.abs(initialEnergy)) * 100 : 0;
+      ui.energy.textContent = `${drift >= 0 ? "+" : ""}${drift.toFixed(2)}%`;
+      ui.energy.style.color = Math.abs(drift) > 1 ? "var(--danger)" : "var(--green)";
+    }
+
+    function renderLegend() {
+      ui.legend.innerHTML = "";
+      for (const b of bodies) {
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.innerHTML = `<span class="dot" style="color:${b.color};background:${b.color}"></span>${b.name} - ${b.baseMass.toFixed(b.baseMass < 1 ? 3 : 2)} Msun`;
+        ui.legend.appendChild(pill);
+      }
+      if (catalogObjects.length) {
+        const groups = [
+          ["stars", "#dce9ff"],
+          ["planets", "#8cffbf"],
+          ["nebulae", "#c77dff"],
+          ["galaxies", "#a8d8ff"],
+          ["black holes", "#4d5365"]
+        ];
+        for (const [label, color] of groups) {
+          const pill = document.createElement("span");
+          pill.className = "pill";
+          pill.innerHTML = `<span class="dot" style="color:${color};background:${color}"></span>${label}`;
+          ui.legend.appendChild(pill);
+        }
+        const count = document.createElement("span");
+        count.className = "pill";
+        count.textContent = `${catalogObjects.length.toLocaleString()} catalog objects rendered`;
+        ui.legend.appendChild(count);
+      }
+    }
+
+    function renderPresetButtons() {
+      for (const [key, preset] of Object.entries(systems)) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.preset = key;
+        button.textContent = preset.label;
+        button.title = preset.subtitle;
+        button.addEventListener("click", () => resetSystem(key));
+        ui.presets.appendChild(button);
+      }
+    }
+
+    function showNotice(text) {
+      ui.notice.textContent = text;
+      ui.notice.classList.add("show");
+      clearTimeout(showNotice.timer);
+      showNotice.timer = setTimeout(() => ui.notice.classList.remove("show"), 1900);
+    }
+
+    function loop(now) {
+      const realDt = Math.min(0.045, (now - last) / 1000);
+      last = now;
+      const simDt = realDt * timeMultiplier();
+
+      if (!paused) {
+        integrate(simDt);
+        updateParticles(realDt * 3.2);
+      }
+
+      fitCamera(false);
+      drawBackground(now);
+      drawCatalogObjects();
+      drawTrails();
+      drawParticles();
+      drawBodies();
+      updateUi();
+      requestAnimationFrame(loop);
+    }
+
+    function bindControls() {
+      ui.massScale.addEventListener("input", () => {
+        const oldMasses = bodies.map((b) => b.m);
+        applyMassScale();
+        for (let i = 0; i < bodies.length; i++) {
+          const ratio = Math.sqrt(oldMasses[i] / bodies[i].m);
+          bodies[i].vx /= ratio;
+          bodies[i].vy /= ratio;
+        }
+        centerMomentum();
+        computeAccelerations();
+        initialEnergy = totalEnergy();
+      });
+
+      ui.trailScale.addEventListener("input", () => updateUi());
+      ui.cameraScale.addEventListener("input", () => fitCamera(true));
+      ui.timeScale.addEventListener("input", () => updateUi());
+
+      ui.pauseBtn.addEventListener("click", () => {
+        paused = !paused;
+        ui.pauseBtn.textContent = paused ? "Resume" : "Pause";
+      });
+
+      ui.restartBtn.addEventListener("click", () => {
+        resetSystem(presetKey);
+        showNotice("System restarted from physically balanced initial conditions.");
+      });
+
+      ui.explodeBtn.addEventListener("click", () => {
+        const c = centerOfMass();
+        collisionBurst(c.x, c.y, 2.2, "#79e0ff", "#ffba70");
+        camera.shake = 1.1;
+      });
+
+      canvas.addEventListener("pointerdown", (event) => {
+        pointer.down = true;
+        pointer.x = event.clientX;
+        pointer.y = event.clientY;
+        pointer.ox = camera.x;
+        pointer.oy = camera.y;
+        canvas.setPointerCapture(event.pointerId);
+      });
+
+      canvas.addEventListener("pointermove", (event) => {
+        if (!pointer.down) return;
+        camera.x = pointer.ox - (event.clientX - pointer.x) / camera.zoom;
+        camera.y = pointer.oy - (event.clientY - pointer.y) / camera.zoom;
+      });
+
+      canvas.addEventListener("pointerup", () => {
+        pointer.down = false;
+      });
+
+      canvas.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const before = screenToWorld(event.clientX, event.clientY);
+        const factor = Math.exp(-event.deltaY * 0.0012);
+        camera.zoom = Math.max(4, Math.min(900, camera.zoom * factor));
+        const after = screenToWorld(event.clientX, event.clientY);
+        camera.x += before.x - after.x;
+        camera.y += before.y - after.y;
+      }, { passive: false });
+    }
+
+    window.addEventListener("resize", resize);
+    renderPresetButtons();
+    bindControls();
+    resize();
+    resetSystem();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
