@@ -345,6 +345,11 @@
           <output id="trailOut">74%</output>
         </div>
         <div class="row">
+          <label for="catalogScale">Catalog</label>
+          <input id="catalogScale" type="range" min="20" max="100" value="82">
+          <output id="catalogOut">82%</output>
+        </div>
+        <div class="row">
           <label for="cameraScale">Camera</label>
           <input id="cameraScale" type="range" min="0" max="100" value="68">
           <output id="cameraOut">Cinema</output>
@@ -382,6 +387,8 @@
       massOut: document.getElementById("massOut"),
       trailScale: document.getElementById("trailScale"),
       trailOut: document.getElementById("trailOut"),
+      catalogScale: document.getElementById("catalogScale"),
+      catalogOut: document.getElementById("catalogOut"),
       cameraScale: document.getElementById("cameraScale"),
       cameraOut: document.getElementById("cameraOut"),
       pauseBtn: document.getElementById("pauseBtn"),
@@ -472,6 +479,37 @@
       catalogSeed("Triangulum", "galaxy", 50000000000, -52, -9, "#a8d8ff"),
       catalogSeed("3C 273", "quasar", 886000000, 56, 24, "#b88cff"),
       catalogSeed("TON 618", "quasar", 66000000000, -57, 28, "#ff91d2")
+      ,catalogSeed("Polaris", "star", 5.4, 15, 31, "#fff1cc")
+      ,catalogSeed("Rigel", "star", 21.0, 25, -28, "#b8d8ff")
+      ,catalogSeed("Antares", "star", 12.0, -34, -24, "#ff6f51")
+      ,catalogSeed("Canopus", "star", 8.0, 39, -33, "#fff1c4")
+      ,catalogSeed("Barnard's Star", "star", 0.16, -6, -18, "#ff8c69")
+      ,catalogSeed("Luhman 16", "star", 0.04, -13, 20, "#c7784a")
+      ,catalogSeed("Wolf 359", "star", 0.09, 18, 18, "#ff756d")
+      ,catalogSeed("Lalande 21185", "star", 0.46, -21, 8, "#ffa978")
+      ,catalogSeed("Epsilon Eridani", "star", 0.82, 22, 5, "#ffd28b")
+      ,catalogSeed("Tau Ceti", "star", 0.78, -18, -2, "#ffd99a")
+      ,catalogSeed("Kepler-22b", "planet", 0.00003, -28, 11, "#9dffca")
+      ,catalogSeed("K2-18 b", "planet", 0.000027, 30, -5, "#88d7ff")
+      ,catalogSeed("WASP-12 b", "planet", 0.0014, 42, 15, "#ff9e6e")
+      ,catalogSeed("HD 209458 b", "planet", 0.00066, -38, -4, "#e0c2ff")
+      ,catalogSeed("TOI-700 d", "planet", 0.000006, 12, -31, "#8cffbf")
+      ,catalogSeed("LHS 1140 b", "planet", 0.000021, -27, -29, "#74e0ff")
+      ,catalogSeed("Horsehead Nebula", "nebula", 30, 32, 31, "#b36fff")
+      ,catalogSeed("Carina Nebula", "nebula", 10000, -41, 33, "#ff7fb8")
+      ,catalogSeed("Eagle Nebula", "nebula", 8000, 46, -30, "#8cffd7")
+      ,catalogSeed("Lagoon Nebula", "nebula", 9000, -48, -31, "#ff9a6d")
+      ,catalogSeed("Ring Nebula", "nebula", 1.2, 6, 36, "#79e0ff")
+      ,catalogSeed("47 Tucanae", "cluster", 700000, -53, 10, "#ffe6a3")
+      ,catalogSeed("Hyades", "cluster", 400, 11, 25, "#ffd891")
+      ,catalogSeed("Beehive Cluster", "cluster", 1000, -11, 26, "#d7e7ff")
+      ,catalogSeed("Large Magellanic Cloud", "galaxy", 15000000000, 58, -24, "#b8d8ff")
+      ,catalogSeed("Small Magellanic Cloud", "galaxy", 7000000000, 53, -34, "#a8d8ff")
+      ,catalogSeed("Sombrero Galaxy", "galaxy", 800000000000, -60, -20, "#ffe6c4")
+      ,catalogSeed("Whirlpool Galaxy", "galaxy", 160000000000, 62, 2, "#c7dcff")
+      ,catalogSeed("Centaurus A", "galaxy", 1000000000000, -65, 7, "#ffcf9d")
+      ,catalogSeed("OJ 287", "quasar", 18000000000, -64, 35, "#d3a1ff")
+      ,catalogSeed("APM 08279+5255", "quasar", 23000000000, 64, 35, "#ff91d2")
     ];
 
     let width = 1;
@@ -500,29 +538,41 @@
       return { name, kind, mass, x, y, color, named: true };
     }
 
-    function makeCatalogObject(name, kind, mass, x, y, color, radius, alpha = 0.78) {
-      return { name, kind, mass, x, y, color, radius, alpha };
+    function makeCatalogObject(name, kind, mass, x, y, color, radius, alpha = 0.78, named = false) {
+      return { name, kind, mass, x, y, color, radius, alpha, named };
     }
 
     function generateKnownCatalog() {
       const rand = mulberry(9112026);
+      const density = Number(ui.catalogScale.value) / 100;
       const objects = knownObjectSeeds.map((item) => {
         const radius = item.kind === "galaxy" ? 4.8 : item.kind === "nebula" ? 5.7 : item.kind === "blackHole" ? 3.2 : 2.2;
-        return makeCatalogObject(item.name, item.kind, item.mass, item.x * 22, item.y * 22, item.color, radius, 0.92);
+        return makeCatalogObject(item.name, item.kind, item.mass, item.x * 22, item.y * 22, item.color, radius, 0.92, true);
       });
 
       const bands = [
-        { prefix: "Gaia star", kind: "star", count: 620, color: "#dce9ff", spread: 1450, alpha: 0.42 },
-        { prefix: "Confirmed exoplanet", kind: "planet", count: 260, color: "#8cffbf", spread: 980, alpha: 0.56 },
-        { prefix: "Minor planet", kind: "planet", count: 360, color: "#ffcf7b", spread: 1260, alpha: 0.38 },
-        { prefix: "Deep-sky nebula", kind: "nebula", count: 64, color: "#c77dff", spread: 1350, alpha: 0.48 },
-        { prefix: "Galaxy catalog", kind: "galaxy", count: 120, color: "#a8d8ff", spread: 1800, alpha: 0.5 },
-        { prefix: "Quasar candidate", kind: "quasar", count: 72, color: "#ff91d2", spread: 1900, alpha: 0.58 },
-        { prefix: "Black-hole candidate", kind: "blackHole", count: 36, color: "#4d5365", spread: 1120, alpha: 0.7 }
+        { prefix: "Gaia star", kind: "star", count: 1800, color: "#dce9ff", spread: 1850, alpha: 0.35 },
+        { prefix: "Variable star", kind: "star", count: 520, color: "#ffd891", spread: 1650, alpha: 0.34 },
+        { prefix: "White dwarf", kind: "star", count: 420, color: "#f3fbff", spread: 1500, alpha: 0.4 },
+        { prefix: "Brown dwarf", kind: "star", count: 240, color: "#c7784a", spread: 1220, alpha: 0.42 },
+        { prefix: "Confirmed exoplanet", kind: "planet", count: 700, color: "#8cffbf", spread: 1200, alpha: 0.56 },
+        { prefix: "Candidate exoplanet", kind: "planet", count: 620, color: "#74e0ff", spread: 1280, alpha: 0.42 },
+        { prefix: "Minor planet", kind: "planet", count: 860, color: "#ffcf7b", spread: 1540, alpha: 0.36 },
+        { prefix: "Comet orbit", kind: "planet", count: 190, color: "#bdefff", spread: 1720, alpha: 0.34 },
+        { prefix: "Deep-sky nebula", kind: "nebula", count: 160, color: "#c77dff", spread: 1580, alpha: 0.45 },
+        { prefix: "Planetary nebula", kind: "nebula", count: 90, color: "#79e0ff", spread: 1500, alpha: 0.5 },
+        { prefix: "Open cluster", kind: "cluster", count: 120, color: "#ffe6a3", spread: 1500, alpha: 0.5 },
+        { prefix: "Globular cluster", kind: "cluster", count: 80, color: "#ffcf7b", spread: 1620, alpha: 0.56 },
+        { prefix: "Galaxy catalog", kind: "galaxy", count: 320, color: "#a8d8ff", spread: 2200, alpha: 0.48 },
+        { prefix: "Radio galaxy", kind: "galaxy", count: 140, color: "#ffcf9d", spread: 2300, alpha: 0.46 },
+        { prefix: "Quasar candidate", kind: "quasar", count: 220, color: "#ff91d2", spread: 2400, alpha: 0.56 },
+        { prefix: "Black-hole candidate", kind: "blackHole", count: 96, color: "#4d5365", spread: 1480, alpha: 0.68 },
+        { prefix: "Gravitational-wave remnant", kind: "blackHole", count: 42, color: "#746f8b", spread: 1700, alpha: 0.72 }
       ];
 
       for (const band of bands) {
-        for (let i = 0; i < band.count; i++) {
+        const count = Math.max(1, Math.round(band.count * density));
+        for (let i = 0; i < count; i++) {
           const arm = (i % 4) * Math.PI * 0.5;
           const radius = Math.pow(rand(), 0.62) * band.spread + 35;
           const angle = arm + radius * 0.006 + (rand() - 0.5) * 1.15;
@@ -530,7 +580,7 @@
           const x = Math.cos(angle) * radius + z;
           const y = Math.sin(angle) * radius * 0.55 + (rand() - 0.5) * 180;
           const visualRadius = band.kind === "galaxy" ? 2.4 + rand() * 2.8 : band.kind === "nebula" ? 2.8 + rand() * 3.6 : 0.85 + rand() * 1.65;
-          const mass = band.kind === "galaxy" ? 1e9 + rand() * 1e12 : band.kind === "blackHole" ? 3 + rand() * 1e8 : rand() * 12;
+          const mass = band.kind === "galaxy" ? 1e9 + rand() * 1e12 : band.kind === "blackHole" ? 3 + rand() * 1e8 : band.kind === "planet" ? rand() * 0.004 : rand() * 12;
           objects.push(makeCatalogObject(`${band.prefix} ${i + 1}`, band.kind, mass, x, y, band.color, visualRadius, band.alpha));
         }
       }
@@ -906,6 +956,12 @@
           ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
           ctx.fill();
         }
+
+        if (object.named && camera.zoom > 0.14) {
+          ctx.fillStyle = "rgba(238, 246, 255, 0.78)";
+          ctx.font = "11px Inter, system-ui, sans-serif";
+          ctx.fillText(object.name, p.x + radius + 5, p.y - radius - 4);
+        }
       }
       ctx.restore();
     }
@@ -1007,6 +1063,7 @@
     function updateUi() {
       ui.timeOut.textContent = `${timeMultiplier().toFixed(1)}x`;
       ui.trailOut.textContent = `${ui.trailScale.value}%`;
+      ui.catalogOut.textContent = `${ui.catalogScale.value}%`;
       ui.age.textContent = `${age.toFixed(age < 10 ? 2 : 1)} y`;
       const drift = initialEnergy ? ((totalEnergy() - initialEnergy) / Math.abs(initialEnergy)) * 100 : 0;
       ui.energy.textContent = `${drift >= 0 ? "+" : ""}${drift.toFixed(2)}%`;
@@ -1096,6 +1153,13 @@
       });
 
       ui.trailScale.addEventListener("input", () => updateUi());
+      ui.catalogScale.addEventListener("input", () => {
+        updateUi();
+        if (!systems[presetKey].catalog) return;
+        catalogObjects = generateKnownCatalog();
+        fitCamera(true);
+        renderLegend();
+      });
       ui.cameraScale.addEventListener("input", () => fitCamera(true));
       ui.timeScale.addEventListener("input", () => updateUi());
 
