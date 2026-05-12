@@ -1,6 +1,16 @@
 # Three Body Stellar Dynamics
 
+[![Static check](https://github.com/souravpanda25/three_body_simulation/actions/workflows/static-check.yml/badge.svg)](https://github.com/souravpanda25/three_body_simulation/actions/workflows/static-check.yml)
+
+![Three Body Stellar Dynamics preview](assets/preview.svg)
+
 An interactive browser simulation of gravitational star systems, black holes, trails, particle bursts, and a cinematic cosmic catalog view.
+
+## Live Demo
+
+```text
+https://souravpanda25.github.io/three_body_simulation/
+```
 
 ## Features
 
@@ -45,3 +55,15 @@ There is no single complete public database of every cosmic object ever discover
 ## Tech
 
 Built with plain HTML, CSS, and JavaScript. No framework or build step required.
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned upgrades.
+
+## Contributing
+
+Ideas, bug reports, and feature requests can be added through GitHub Issues. Good first improvements include better mobile controls, more real object presets, sound effects, and richer black-hole visuals.
+
+## Releases
+
+See [CHANGELOG.md](CHANGELOG.md) for version notes.
