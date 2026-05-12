@@ -12,6 +12,9 @@
 
 ## Unreleased
 
+- Added Chaos Trio preset for random-looking deterministic three-body motion
+- Clarified that Figure 8 is a special periodic solution
+- Added per-object mass sliders for each active simulated body
 - Added GitHub README polish
 - Added roadmap
 - Added issue templates

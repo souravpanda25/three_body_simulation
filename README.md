@@ -16,11 +16,13 @@ https://souravpanda25.github.io/three_body_simulation/
 
 - Newtonian gravity using AU, solar masses, and years
 - Stable three-body figure-eight preset
+- Chaotic three-body scattering preset
 - Alpha Centauri and Sirius-inspired systems
 - Trinary black-hole system
 - Cinematic camera with zoom and drag controls
 - Glow trails and collision particle bursts
-- Mass, time, trail, camera, and catalog density controls
+- Global and per-object mass controls
+- Time, trail, camera, and catalog density controls
 - Known Catalog mode with named real objects and generated discovered-object populations
 
 ## Run Locally
@@ -51,6 +53,10 @@ https://souravpanda25.github.io/three_body_simulation/
 The Known Catalog mode includes named real objects such as Sgr A*, M87*, Sirius, Alpha Centauri, Proxima b, Orion Nebula, Andromeda, and TON 618.
 
 There is no single complete public database of every cosmic object ever discovered, and a browser cannot realistically simulate gravity for millions or billions of objects at once. So the app uses a physically simulated core system plus a large visual catalog layer representing discovered populations like stars, exoplanets, minor planets, nebulae, galaxies, quasars, and black-hole candidates.
+
+## Figure 8 Versus Chaos
+
+The Figure 8 preset is a real special-case periodic solution of the three-body problem, so it intentionally repeats a clean path. For the random-looking behavior most people associate with the three-body problem, use the Chaos Trio preset.
 
 ## Tech
 

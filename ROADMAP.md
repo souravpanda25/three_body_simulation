@@ -5,7 +5,7 @@
 - Add a real screenshot or short demo GIF to the README
 - Improve mobile layout for smaller screens
 - Add tooltips for each preset and slider
-- Add a pauseable object inspector with mass, velocity, and distance values
+- Add a pauseable object inspector with velocity and distance values
 - Add optional sound effects for collisions and particle bursts
 
 ## Data And Catalog
